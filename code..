@@ -1,0 +1,42 @@
+pip install pandas numpy scikit-learn
+# Import necessary libraries
+import pandas as pd
+import numpy as np
+from sklearn.neighbors import NearestNeighbors
+
+# Load MovieLens data (you can use 'ratings.csv' and 'movies.csv' from MovieLens dataset)
+movies = pd.read_csv('movies.csv')  # Movies dataset (movieId, title, genres)
+ratings = pd.read_csv('ratings.csv')  # Ratings dataset (userId, movieId, rating)
+
+# Merge the datasets on movieId to combine movie details with ratings
+movie_data = pd.merge(ratings, movies, on='movieId')
+
+# Pivot the data so that we have users as rows, movies as columns, and ratings as values
+movie_ratings_matrix = movie_data.pivot_table(index='userId', columns='title', values='rating')
+
+# Fill NaN values with 0 (or could use some other method)
+movie_ratings_matrix = movie_ratings_matrix.fillna(0)
+
+# Use Nearest Neighbors for collaborative filtering
+knn = NearestNeighbors(n_neighbors=6, metric='cosine', algorithm='brute')
+knn.fit(movie_ratings_matrix.T)  # Transpose matrix so we treat movies as data points
+
+# Function to get recommendations
+def get_movie_recommendations(movie_title):
+    # Find the index of the movie
+    movie_index = movie_ratings_matrix.columns.get_loc(movie_title)
+    
+    # Get the 5 most similar movies
+    distances, indices = knn.kneighbors(movie_ratings_matrix.T[movie_index].reshape(1, -1))
+    
+    # Get movie titles from indices
+    recommended_movies = [movie_ratings_matrix.columns[i] for i in indices.flatten()]
+    
+    return recommended_movies
+
+# Test the recommendation system
+movie_title = 'The Dark Knight'
+recommended_movies = get_movie_recommendations(movie_title)
+print(f"Movies recommended based on {movie_title}:")
+for movie in recommended_movies:
+    print(movie)
